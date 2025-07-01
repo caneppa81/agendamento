@@ -45,9 +45,24 @@
     }
 
     async function cancelar(id) {
-      await fetch('/cancelar/' + id, { method: 'DELETE' });
-      carregarAgendamentos();
+  const senha = prompt("Digite a senha para cancelar:");
+  if (!senha) return;
+
+  const res = await fetch('/cancelar/' + id, {
+    method: 'DELETE',
+    headers: {
+      'x-admin-password': senha
     }
+  });
+
+  if (!res.ok) {
+    const erro = await res.json();
+    alert(erro.erro || 'Erro ao cancelar');
+  } else {
+    carregarAgendamentos();
+  }
+}
+
 
     document.getElementById('form-agendamento').addEventListener('submit', async e => {
   e.preventDefault();
