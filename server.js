@@ -33,11 +33,25 @@ app.get('/agendamentos', (req, res) => {
 
 app.post('/agendar', (req, res) => {
   const { nome, data, horario } = req.body;
-  db.run('INSERT INTO agendamentos (nome, data, horario) VALUES (?, ?, ?)', [nome, data, horario], function (err) {
-    if (err) return res.status(500).send(err);
-    res.json({ id: this.lastID });
+
+  // Verificar se já existe agendamento para esse dia e horário
+  const sqlCheck = `SELECT COUNT(*) as total FROM agendamentos WHERE data = ? AND horario = ?`;
+  db.get(sqlCheck, [data, horario], (err, row) => {
+    if (err) return res.status(500).send({ erro: 'Erro ao verificar duplicação' });
+
+    if (row.total > 0) {
+      return res.status(400).send({ erro: 'Já existe um agendamento nesse horário.' });
+    }
+
+    // Se não existir, salvar o agendamento
+    const sqlInsert = `INSERT INTO agendamentos (nome, data, horario) VALUES (?, ?, ?)`;
+    db.run(sqlInsert, [nome, data, horario], function (err) {
+      if (err) return res.status(500).send({ erro: 'Erro ao agendar' });
+      res.status(201).json({ id: this.lastID });
+    });
   });
 });
+
 
 app.delete('/cancelar/:id', (req, res) => {
   const { id } = req.params;
@@ -48,5 +62,4 @@ app.delete('/cancelar/:id', (req, res) => {
 });
 
 app.listen(PORT, () => console.log(`Servidor rodando em http://localhost:${PORT}`));
-
 
