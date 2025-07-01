@@ -50,21 +50,28 @@
     }
 
     document.getElementById('form-agendamento').addEventListener('submit', async e => {
-      e.preventDefault();
-      const nome = document.getElementById('nome').value;
-      const dataHora = new Date(document.getElementById('dataHorario').value);
-      const data = dataHora.toISOString().split('T')[0];
-      const horario = dataHora.toTimeString().slice(0, 5);
-      await fetch('/agendar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nome, data, horario })
-      });
-      e.target.reset();
-      carregarAgendamentos();
-    });
+  e.preventDefault();
+  const nome = document.getElementById('nome').value;
+  const dataHora = new Date(document.getElementById('dataHorario').value);
+  const data = dataHora.toISOString().split('T')[0];
+  const horario = dataHora.toTimeString().slice(0, 5);
 
-    carregarAgendamentos();
+  const res = await fetch('/agendar', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nome, data, horario })
+  });
+
+  if (!res.ok) {
+    const erro = await res.json();
+    alert(erro.erro || 'Erro ao agendar');
+    return;
+  }
+
+  e.target.reset();
+  carregarAgendamentos();
+});
+
   </script>
 </body>
 </html>
