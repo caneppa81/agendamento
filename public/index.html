@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <title>Agendamento</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>Agendamento de Horário</h1>
+  <form id="form-agendamento">
+    <input type="text" id="nome" placeholder="Seu nome" required />
+    <input type="datetime-local" id="dataHorario" required />
+    <button type="submit">Agendar</button>
+  </form>
+
+  <h2>Agendamentos</h2>
+  <table id="tabela-agendamentos">
+    <thead>
+      <tr>
+        <th>Nome</th>
+        <th>Data</th>
+        <th>Horário</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    async function carregarAgendamentos() {
+      const res = await fetch('/agendamentos');
+      const dados = await res.json();
+      const tbody = document.querySelector('#tabela-agendamentos tbody');
+      tbody.innerHTML = '';
+      dados.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${item.nome}</td>
+          <td>${item.data}</td>
+          <td>${item.horario}</td>
+          <td><button onclick="cancelar(${item.id})">Cancelar</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function cancelar(id) {
+      await fetch('/cancelar/' + id, { method: 'DELETE' });
+      carregarAgendamentos();
+    }
+
+    document.getElementById('form-agendamento').addEventListener('submit', async e => {
+      e.preventDefault();
+      const nome = document.getElementById('nome').value;
+      const dataHora = new Date(document.getElementById('dataHorario').value);
+      const data = dataHora.toISOString().split('T')[0];
+      const horario = dataHora.toTimeString().slice(0, 5);
+      await fetch('/agendar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome, data, horario })
+      });
+      e.target.reset();
+      carregarAgendamentos();
+    });
+
+    carregarAgendamentos();
+  </script>
+</body>
+</html>
+
