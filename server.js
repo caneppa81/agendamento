@@ -54,12 +54,20 @@ app.post('/agendar', (req, res) => {
 
 
 app.delete('/cancelar/:id', (req, res) => {
+  const senha = req.headers['x-admin-password'];
+  if (senha !== ADMIN_PASSWORD) {
+    return res.status(403).send({ erro: 'Senha incorreta. Cancelamento não autorizado.' });
+  }
+
   const { id } = req.params;
   db.run('DELETE FROM agendamentos WHERE id = ?', [id], function (err) {
-    if (err) return res.status(500).send(err);
+    if (err) return res.status(500).send({ erro: 'Erro ao cancelar' });
     res.sendStatus(200);
   });
 });
+
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'senha123';
+
 
 app.listen(PORT, () => console.log(`Servidor rodando em http://localhost:${PORT}`));
 
