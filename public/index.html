@@ -9,7 +9,10 @@
   <h1>Agendamento de Horário</h1>
   <form id="form-agendamento">
     <input type="text" id="nome" placeholder="Seu nome" required />
-    <input type="datetime-local" id="dataHorario" required />
+    <input type="date" id="data" required />
+    <select id="horario" required>
+      <option value="">Selecione a data primeiro</option>
+    </select>
     <button type="submit">Agendar</button>
   </form>
 
@@ -45,49 +48,67 @@
     }
 
     async function cancelar(id) {
-  const senha = prompt("Digite a senha para cancelar:");
-  if (!senha) return;
+      const senha = prompt("Digite a senha para cancelar:");
+      if (!senha) return;
 
-  const res = await fetch('/cancelar/' + id, {
-    method: 'DELETE',
-    headers: {
-      'x-admin-password': senha
+      const res = await fetch('/cancelar/' + id, {
+        method: 'DELETE',
+        headers: { 'x-admin-password': senha }
+      });
+
+      if (!res.ok) {
+        const erro = await res.json();
+        alert(erro.erro || 'Erro ao cancelar');
+      } else {
+        carregarAgendamentos();
+      }
     }
-  });
 
-  if (!res.ok) {
-    const erro = await res.json();
-    alert(erro.erro || 'Erro ao cancelar');
-  } else {
-    carregarAgendamentos();
-  }
-}
+    document.getElementById('data').addEventListener('change', async () => {
+      const data = document.getElementById('data').value;
+      const select = document.getElementById('horario');
+      select.innerHTML = '<option value="">Carregando...</option>';
 
+      const res = await fetch('/horarios-disponiveis?data=' + data);
+      const horarios = await res.json();
+
+      if (horarios.length === 0) {
+        select.innerHTML = '<option value="">Nenhum horário disponível</option>';
+        return;
+      }
+
+      select.innerHTML = '<option value="">Selecione um horário</option>';
+      horarios.forEach(h => {
+        const opt = document.createElement('option');
+        opt.value = h;
+        opt.textContent = h;
+        select.appendChild(opt);
+      });
+    });
 
     document.getElementById('form-agendamento').addEventListener('submit', async e => {
-  e.preventDefault();
-  const nome = document.getElementById('nome').value;
-  const dataHora = new Date(document.getElementById('dataHorario').value);
-  const data = dataHora.toISOString().split('T')[0];
-  const horario = dataHora.toTimeString().slice(0, 5);
+      e.preventDefault();
+      const nome = document.getElementById('nome').value;
+      const data = document.getElementById('data').value;
+      const horario = document.getElementById('horario').value;
 
-  const res = await fetch('/agendar', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ nome, data, horario })
-  });
+      const res = await fetch('/agendar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome, data, horario })
+      });
 
-  if (!res.ok) {
-    const erro = await res.json();
-    alert(erro.erro || 'Erro ao agendar');
-    return;
-  }
+      if (!res.ok) {
+        const erro = await res.json();
+        alert(erro.erro || 'Erro ao agendar');
+        return;
+      }
 
-  e.target.reset();
-  carregarAgendamentos();
-});
+      e.target.reset();
+      carregarAgendamentos();
+    });
 
+    carregarAgendamentos();
   </script>
 </body>
 </html>
-

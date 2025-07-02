@@ -3,7 +3,7 @@ body {
   max-width: 600px;
   margin: 40px auto;
 }
-form input, form button {
+form input, form select, form button {
   padding: 8px;
   margin: 6px 0;
   display: block;
@@ -24,4 +24,3 @@ th, td {
 button {
   cursor: pointer;
 }
-
