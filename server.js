@@ -2,17 +2,16 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const sqlite3 = require('sqlite3').verbose();
+const path = require('path');
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'senha123';
 
-// Middleware
 app.use(cors());
 app.use(bodyParser.json());
 app.use(express.static('public'));
 
-// Banco de dados
 const db = new sqlite3.Database('./agendamentos.db');
-
 db.serialize(() => {
   db.run(`CREATE TABLE IF NOT EXISTS agendamentos (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -23,7 +22,6 @@ db.serialize(() => {
   )`);
 });
 
-// Rotas
 app.get('/agendamentos', (req, res) => {
   db.all('SELECT * FROM agendamentos ORDER BY data, horario', (err, rows) => {
     if (err) return res.status(500).send(err);
@@ -31,27 +29,32 @@ app.get('/agendamentos', (req, res) => {
   });
 });
 
+app.get('/horarios-disponiveis', (req, res) => {
+  const { data } = req.query;
+  if (!data) return res.status(400).send({ erro: 'Data não fornecida' });
+
+  const horariosPadrao = ['08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00'];
+  db.all('SELECT horario FROM agendamentos WHERE data = ?', [data], (err, rows) => {
+    if (err) return res.status(500).send(err);
+    const ocupados = rows.map(r => r.horario);
+    const disponiveis = horariosPadrao.filter(h => !ocupados.includes(h));
+    res.json(disponiveis);
+  });
+});
+
 app.post('/agendar', (req, res) => {
   const { nome, data, horario } = req.body;
 
-  // Verificar se já existe agendamento para esse dia e horário
-  const sqlCheck = `SELECT COUNT(*) as total FROM agendamentos WHERE data = ? AND horario = ?`;
-  db.get(sqlCheck, [data, horario], (err, row) => {
+  db.get('SELECT COUNT(*) as total FROM agendamentos WHERE data = ? AND horario = ?', [data, horario], (err, row) => {
     if (err) return res.status(500).send({ erro: 'Erro ao verificar duplicação' });
+    if (row.total > 0) return res.status(400).send({ erro: 'Horário já agendado.' });
 
-    if (row.total > 0) {
-      return res.status(400).send({ erro: 'Já existe um agendamento nesse horário.' });
-    }
-
-    // Se não existir, salvar o agendamento
-    const sqlInsert = `INSERT INTO agendamentos (nome, data, horario) VALUES (?, ?, ?)`;
-    db.run(sqlInsert, [nome, data, horario], function (err) {
+    db.run('INSERT INTO agendamentos (nome, data, horario) VALUES (?, ?, ?)', [nome, data, horario], function (err) {
       if (err) return res.status(500).send({ erro: 'Erro ao agendar' });
       res.status(201).json({ id: this.lastID });
     });
   });
 });
-
 
 app.delete('/cancelar/:id', (req, res) => {
   const senha = req.headers['x-admin-password'];
@@ -66,8 +69,4 @@ app.delete('/cancelar/:id', (req, res) => {
   });
 });
 
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'senha123';
-
-
 app.listen(PORT, () => console.log(`Servidor rodando em http://localhost:${PORT}`));
-
